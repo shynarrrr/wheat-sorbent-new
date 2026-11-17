@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WheatSorbent Analyzer — RGB талдау</title>
+<style>
+:root{--bg:#f3f6fa;--card:#fff;--ink:#172334;--muted:#65758b;--line:#dce4ee;--blue:#2457d6;--blue2:#eaf0ff;--green:#16845b;--amber:#9a6500;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,Segoe UI,Arial,sans-serif}
+header{background:linear-gradient(120deg,#142c4c,#2457d6);color:#fff;padding:28px 20px}
+.wrap{max-width:1180px;margin:auto;padding:0 18px}
+h1{font-size:clamp(24px,4vw,34px);margin:0 0 6px}header p{margin:0;color:#dce7ff}
+main{padding:22px 0 44px}.notice{background:#fff8e7;border:1px solid #f0d99b;border-radius:12px;padding:13px 16px;margin-bottom:18px;color:#624500}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:18px;box-shadow:0 3px 14px #24364b0a}
+.card h2{font-size:19px;margin:0 0 5px}.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.full{grid-column:1/-1}.step{display:inline-grid;place-items:center;width:26px;height:26px;background:var(--blue2);color:var(--blue);border-radius:8px;font-weight:700;margin-right:7px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}th{background:#f6f8fc;color:#526176;font-weight:650}td:first-child,th:first-child{text-align:left}
+input{width:100%;min-width:48px;border:1px solid #cbd5e1;border-radius:7px;padding:8px 6px;font:inherit;color:var(--ink);background:#fff;text-align:center}
+input:focus{outline:2px solid #b8caff;border-color:var(--blue)}
+.rgb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;min-width:160px}
+button{border:0;border-radius:9px;padding:10px 15px;font:600 14px inherit;cursor:pointer;background:var(--blue);color:#fff}
+button.secondary{background:#edf2f8;color:#26364b}button:hover{filter:brightness(.97)}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.metric{background:#f6f8fc;border:1px solid var(--line);border-radius:11px;padding:12px}
+.metric small{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:21px;margin-top:3px;overflow-wrap:anywhere}
+.status{margin-top:10px;padding:10px 12px;border-radius:9px;background:#f1f5f9;color:#344256;font-size:13px}
+.status.good{background:#eaf8f1;color:#126344}.status.warn{background:#fff6e5;color:#795100}.status.bad{background:#fff0ef;color:#9d2118}
+canvas{width:100%;height:310px;display:block;border:1px solid var(--line);border-radius:10px;background:#fff}
+.formrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.formula{background:#f6f8fc;border-radius:9px;padding:11px 13px;margin:8px 0;font-family:Cambria,Georgia,serif;font-size:17px;overflow-wrap:anywhere}
+.formula small{font:12px/1.5 Segoe UI,Arial,sans-serif;color:var(--muted);display:block;margin-top:4px}
+ul{padding-left:20px;margin:8px 0;color:#46566b}li{margin:4px 0}
+footer{color:var(--muted);font-size:12px;margin-top:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.formrow{grid-template-columns:1fr}.card{padding:14px}.rgb{min-width:135px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>WheatSorbent Analyzer</h1>
+<p>Бидай сабаны сорбентінің метилен көгін адсорбциялау тиімділігін RGB әдісімен бағалау</p>
+</div></header>
+<main class="wrap">
+<div class="notice"><b>Маңызды:</b> бұл құрал смартфонмен түсірілген суреттен Color Picker арқылы алынған RGB мәндерін өңдейді. Ол UV-Vis спектрофотометрді алмастырмайды. Нәтиже — калибровкаға негізделген салыстырмалы бағалау.</div>
+<div class="grid">
+<section class="card full">
+<h2><span class="step">1</span>Калибровка деректері</h2>
+<p class="sub">Әр концентрация үшін бір ерітіндіден 5 нүктенің RGB мәнін енгіз. Бірдей жарық, фон, ыдыс және камера параметрлерін сақта.</p>
+<div style="overflow-x:auto"><table id="calTable">
+<thead><tr><th>Концентрация (мг/л)</th><th>RGB өлшемдері (әр нүкте үшін R, G, B)</th><th>Орташа R</th><th>A<sub>R</sub></th></tr></thead>
+<tbody></tbody></table></div>
+<div class="actions"><button onclick="calcCalibration()">Қайта есептеу / графикті жаңарту</button><button class="secondary" onclick="fillExample()">Мысал мәндерін енгізу</button><button class="secondary" onclick="clearCalibration()">Тазалау</button></div>
+<div id="calStatus" class="status">RGB мәндерін енгізіп, «Калибровканы есептеу» батырмасын бас.</div>
+<div class="metrics">
+<div class="metric"><small>Сызықтық теңдеу</small><strong id="equation">—</strong></div>
+<div class="metric"><small>R²</small><strong id="r2">—</strong></div>
+<div class="metric"><small>Калибровка нүктесі</small><strong id="ncal">0</strong></div>
+<div class="metric"><small>Қолданылған арна</small><strong>R → A<sub>R</sub></strong></div>
+</div>
+</section>
+<section class="card full">
+<h2><span class="step">2</span>Калибровка графигі</h2>
+<p class="sub">X осі — концентрация (мг/л), Y осі — A<sub>R</sub> түстік көрсеткіші. График калибровка есептелгеннен кейін салынады.</p>
+<canvas id="chart" width="1000" height="380" aria-label="Калибровка графигі"></canvas>
+</section>
+<section class="card">
+<h2><span class="step">3</span>Зерттелетін үлгінің RGB мәндері</h2>
+<p class="sub">Сүзгіден кейінгі ерітіндінің суретінен 5 бөлек нүктені өлшеп енгіз.</p>
+<div id="sampleInputs"></div>
+<div class="actions"><button onclick="calcSample()">Үлгіні есептеу</button><button class="secondary" onclick="clearSample()">Тазалау</button></div>
+<div id="sampleStatus" class="status">Алдымен калибровканы есепте.</div>
+<div class="metrics" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+<div class="metric"><small>Орташа R</small><strong id="sampleR">—</strong></div>
+<div class="metric"><small>A<sub>R</sub></small><strong id="sampleA">—</strong></div>
+<div class="metric"><small>Есептелген C<sub>e</sub></small><strong id="ce">—</strong></div>
+<div class="metric"><small>Өлшеу ауқымы</small><strong id="rangeFlag">—</strong></div>
+</div>
+</section>
+<section class="card">
+<h2><span class="step">4</span>Адсорбция көрсеткіштері</h2>
+<p class="sub">Бастапқы концентрацияны, ерітінді көлемін және сорбент массасын енгіз.</p>
+<div class="formrow">
+<div class="field"><label for="c0">C₀ (мг/л)</label><input id="c0" type="number" min="0" step="any" value="10"></div>
+<div class="field"><label for="vol">V (мл)</label><input id="vol" type="number" min="0" step="any" value="100"></div>
+<div class="field"><label for="mass">m (г)</label><input id="mass" type="number" min="0" step="any" value="1.5"></div>
+</div>
+<div class="actions"><button onclick="calcAdsorption()">Адсорбцияны есептеу</button></div>
+<div class="metrics" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+<div class="metric"><small>Адсорбция тиімділігі, R (%)</small><strong id="removal">—</strong></div>
+<div class="metric"><small>Адсорбция сыйымдылығы, qₑ (мг/г)</small><strong id="qe">—</strong></div>
+</div>
+<div id="adsStatus" class="status">Cₑ есептелгеннен кейін адсорбцияны есепте.</div>
+</section>
+<section class="card full">
+<h2><span class="step">5</span>Қолданылған формулалар және түсіндірмелер</h2>
+<div class="formula">A<sub>R</sub> = log<sub>10</sub>(255 / R̄)<small>R̄ — бес өлшемдегі қызыл (Red) арнасының орташа мәні. R̄ = 0 болса, есептеу мүмкін емес.</small></div>
+<div class="formula">A<sub>R</sub> = aC + b &nbsp; және &nbsp; C<sub>e</sub> = (A<sub>e</sub> − b) / a<small>a — сызықтық регрессия көлбеулігі; b — бос мүше; Cₑ — үлгінің есептелген қалдық концентрациясы.</small></div>
+<div class="formula">R(%) = [(C₀ − Cₑ) / C₀] × 100%<small>C₀ — бастапқы концентрация; Cₑ — тепе-теңдіктен/сүзуден кейінгі концентрация.</small></div>
+<div class="formula">qₑ = [(C₀ − Cₑ) × V] / m<small>V — ерітінді көлемі (литрмен); m — құрғақ сорбент массасы (граммен); qₑ — мг/г.</small></div>
+<ul>
+<li>RGB мәндері 0–255 аралығында болуы керек.</li>
+<li>Бір суреттегі барлық ерітінділерді бірдей жағдайда түсір; жарқылды өшіріп, камера экспозициясын мүмкін болса бекіт.</li>
+<li>Бес нүкте бір ерітіндінің бес тәуелсіз қайталама тәжірибесі емес, бір кескіннің әр жерінен алынған түс өлшемдері екенін ескер.</li>
+<li>Калибровка графигінің R² мәнін тексер. R² төмен болса, концентрацияны сенімді деп есептеме.</li>
+<li>Үлгінің A<sub>R</sub> мәні калибровка аралығынан тыс болса, нәтиже экстраполяция болады және сенімсіз.</li>
+<li>Мүмкін болса, бос сүзгі (мақта/дәке/қағаз, сабансыз) бақылауын да өлше. Бұл түс өзгерісінің тек бидай сабанынан болғанын бағалауға көмектеседі.</li>
+</ul>
+<div class="actions"><button class="secondary" onclick="downloadCSV()">Нәтижелерді CSV ретінде жүктеу</button><button class="secondary" onclick="window.print()">Басып шығару / PDF</button></div>
+<footer>Құрал браузерде офлайн жұмыс істейді. Енгізілген деректер серверге жіберілмейді. Мысал деректер нақты тәжірибе нәтижесі болып саналмайды.</footer>
+</section>
+</div></main>
+<script>
+const defaultConcentrations=[0,5,10,15,20];
+let calibration=null, sampleResult=null;
+const tbody=document.querySelector('#calTable tbody');
+function rgbInputs(prefix){let s='';for(let i=0;i<5;i++)s+=`<div class="rgb" style="margin:4px 0"><input type="number" min="0" max="255" placeholder="R${i+1}" id="${prefix}_${i}_r"><input type="number" min="0" max="255" placeholder="G${i+1}" id="${prefix}_${i}_g"><input type="number" min="0" max="255" placeholder="B${i+1}" id="${prefix}_${i}_b"></div>`;return s}
+const exampleCalibration=[
+ [[176,171,165],[170,165,165],[171,167,156],[164,160,149],[163,163,153]],
+ [[111,166,173],[104,164,175],[103,161,175],[100,162,175],[111,166,173]],
+ [[74,150,173],[70,152,176],[76,150,178],[78,146,173],[68,152,176]],
+ [[57,129,169],[57,129,169],[58,132,175],[58,132,175],[59,135,169]],
+ [[43,101,144],[43,101,144],[40,96,139],[41,97,140],[40,95,137]]
+];
+function putExampleCalibration(){exampleCalibration.forEach((row,i)=>{document.getElementById('conc'+i).value=defaultConcentrations[i];row.forEach((rgb,j)=>rgb.forEach((v,k)=>document.getElementById(`cal${i}_${j}_${'rgb'[k]}`).value=v))});}
+function build(){defaultConcentrations.forEach((c,i)=>{let tr=document.createElement('tr');tr.innerHTML=`<td><input type="number" min="0" step="any" id="conc${i}" value="${c}" aria-label="${i+1}-калибровка концентрациясы"></td><td>${rgbInputs('cal'+i)}</td><td id="meanR${i}">—</td><td id="abs${i}">—</td>`;tbody.appendChild(tr)});document.getElementById('sampleInputs').innerHTML=rgbInputs('sample');putExampleCalibration();restoreInputs();document.querySelectorAll('#calTable input,#sampleInputs input,#c0,#vol,#mass').forEach(el=>el.addEventListener('input',saveInputs));}
+function getRGB(prefix){let arr=[];for(let i=0;i<5;i++){let vals=['r','g','b'].map(ch=>document.getElementById(`${prefix}_${i}_${ch}`).value.trim());if(vals.every(v=>v===''))continue;if(vals.some(v=>v===''))throw Error(`№${i+1} нүктеде R, G, B үшеуін де толтыр.`);let nums=vals.map(Number);if(nums.some(v=>!Number.isFinite(v)||v<0||v>255))throw Error('RGB мәндері 0–255 аралығында болуы керек.');arr.push(nums)}if(arr.length===0)throw Error('Кемінде бір RGB өлшемін енгіз.');return arr}
+function mean(arr){return arr.reduce((s,v)=>s+v,0)/arr.length}
+function calcA(r){if(r<=0)throw Error('Орташа R мәні 0. A_R есептелмейді.');return Math.log10(255/r)}
+function regression(xs,ys){let mx=mean(xs),my=mean(ys),num=0,den=0;for(let i=0;i<xs.length;i++){num+=(xs[i]-mx)*(ys[i]-my);den+=(xs[i]-mx)**2}if(den===0)throw Error('Концентрациялар әртүрлі болуы керек.');let a=num/den,b=my-a*mx;let ssr=0,sst=0;for(let i=0;i<xs.length;i++){ssr+=(ys[i]-(a*xs[i]+b))**2;sst+=(ys[i]-my)**2}let r2=sst===0?(ssr===0?1:0):1-ssr/sst;return {a,b,r2}}
+function calcCalibration(){try{let xs=[],ys=[],means=[];for(let i=0;i<5;i++){let concentration=Number(document.getElementById('conc'+i).value);if(!Number.isFinite(concentration)||concentration<0)throw Error('Концентрация 0-ден кем болмауы және сан болуы керек.');let rgb=getRGB('cal'+i),r=mean(rgb.map(x=>x[0])),A=calcA(r);xs.push(concentration);ys.push(A);means.push(r);document.getElementById('meanR'+i).textContent=r.toFixed(2);document.getElementById('abs'+i).textContent=A.toFixed(4)}if(new Set(xs).size!==xs.length)throw Error('Калибровка концентрациялары қайталанбауы керек.');if(xs.length<3)throw Error('Кемінде 3 концентрацияның RGB мәндерін енгіз. Дұрысы — барлық 5 концентрация.');let fit=regression(xs,ys);if(Math.abs(fit.a)<1e-12)throw Error('Калибровка көлбеулігі нөлге жуық. RGB өлшемдерін тексер.');calibration={xs,ys,means,...fit,min:Math.min(...xs),max:Math.max(...xs)};document.getElementById('equation').textContent=`A=${fit.a.toFixed(5)}C ${fit.b<0?'−':'+'} ${Math.abs(fit.b).toFixed(5)}`;document.getElementById('r2').textContent=fit.r2.toFixed(4);document.getElementById('ncal').textContent=xs.length;let st=document.getElementById('calStatus');st.className='status '+(fit.r2>=.98?'good':fit.r2>=.90?'warn':'bad');st.textContent=fit.r2>=.98?'Калибровка есептелді. Сызықтық сәйкестік жақсы (R² ≥ 0,98).':fit.r2>=.90?'Калибровка есептелді, бірақ сәйкестік орташа. Өлшеу жағдайларын тексер.':'НАЗАР АУДАР: R² төмен. Бұл калибровкамен концентрацияны сенімді бағалауға болмайды. Ерітінділерді қайта өлше.';drawChart();}catch(e){setStatus('calStatus',e.message,'bad')}}
+function drawChart(){let c=document.getElementById('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);if(!calibration){ctx.fillStyle='#65758b';ctx.font='18px Arial';ctx.textAlign='center';ctx.fillText('Калибровканы есептегеннен кейін график шығады',w/2,h/2);return}let pad={l:80,r:35,t:28,b:60},xmin=calibration.min,xmax=calibration.max,ymin=Math.min(...calibration.ys),ymax=Math.max(...calibration.ys);let yr=ymax-ymin||.1;ymin-=yr*.15;ymax+=yr*.15;let X=x=>pad.l+(x-xmin)/(xmax-xmin)*(w-pad.l-pad.r),Y=y=>h-pad.b-(y-ymin)/(ymax-ymin)*(h-pad.t-pad.b);
+ctx.strokeStyle='#e4eaf2';ctx.lineWidth=1;ctx.font='13px Arial';ctx.fillStyle='#536276';ctx.textAlign='right';for(let i=0;i<=5;i++){let y=ymin+(ymax-ymin)*i/5,py=Y(y);ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(w-pad.r,py);ctx.stroke();ctx.fillText(y.toFixed(3),pad.l-10,py+4)}ctx.textAlign='center';for(let i=0;i<=5;i++){let x=xmin+(xmax-xmin)*i/5,px=X(x);ctx.beginPath();ctx.moveTo(px,pad.t);ctx.lineTo(px,h-pad.b);ctx.stroke();ctx.fillText(x.toFixed(1),px,h-pad.b+23)}
+ctx.strokeStyle='#43536a';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,h-pad.b);ctx.lineTo(w-pad.r,h-pad.b);ctx.stroke();
+ctx.fillStyle='#27364b';ctx.font='bold 14px Arial';ctx.fillText('Концентрация C (мг/л)',(pad.l+w-pad.r)/2,h-13);ctx.save();ctx.translate(20,(pad.t+h-pad.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('A_R = log₁₀(255 / R̄)',0,0);ctx.restore();
+ctx.strokeStyle='#2457d6';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(X(xmin),Y(calibration.a*xmin+calibration.b));ctx.lineTo(X(xmax),Y(calibration.a*xmax+calibration.b));ctx.stroke();
+ctx.fillStyle='#e04b35';calibration.xs.forEach((x,i)=>{ctx.beginPath();ctx.arc(X(x),Y(calibration.ys[i]),6,0,Math.PI*2);ctx.fill()});
+ctx.fillStyle='#2457d6';ctx.textAlign='left';ctx.font='13px Arial';ctx.fillText('● Өлшенген нүктелер     — Сызықтық регрессия',pad.l+8,pad.t+15)}
+function calcSample(){try{if(!calibration)throw Error('Алдымен калибровканы есепте.');let arr=getRGB('sample'),r=mean(arr.map(x=>x[0])),A=calcA(r),ce=(A-calibration.b)/calibration.a;sampleResult={r,A,ce};document.getElementById('sampleR').textContent=r.toFixed(2);document.getElementById('sampleA').textContent=A.toFixed(4);document.getElementById('ce').textContent=ce.toFixed(3)+' мг/л';let inside=ce>=calibration.min&&ce<=calibration.max;document.getElementById('rangeFlag').textContent=inside?'Аралық ішінде':'Аралықтан тыс';setStatus('sampleStatus',inside?'Үлгі концентрациясы калибровка аралығында есептелді.':'ЕСКЕРТУ: есептелген концентрация калибровка аралығынан тыс. Бұл — экстраполяция, сенімділігі төмен. Калибровка ауқымын кеңейт немесе үлгіні сұйылтып қайта өлше.',inside?'good':'warn');calcAdsorption()}catch(e){setStatus('sampleStatus',e.message,'bad')}}
+function calcAdsorption(){try{if(!sampleResult)throw Error('Алдымен зерттелетін үлгінің концентрациясын есепте.');let c0=Number(document.getElementById('c0').value),v=Number(document.getElementById('vol').value)/1000,m=Number(document.getElementById('mass').value);if(!(c0>0&&v>0&&m>0))throw Error('C₀, V және m нөлден үлкен болуы керек.');let removal=(c0-sampleResult.ce)/c0*100,qe=(c0-sampleResult.ce)*v/m;document.getElementById('removal').textContent=removal.toFixed(2)+'%';document.getElementById('qe').textContent=qe.toFixed(3);setStatus('adsStatus',removal<0?'Cₑ > C₀: теріс тиімділік шықты. Бастапқы/соңғы өлшемдерді, калибровканы және үлгілерді тексер.':removal>100?'Тиімділік 100%-дан жоғары: деректерді тексер.':'Есептеу орындалды. V көлемі литрге ауыстырылып есептелді.',removal<0||removal>100?'warn':'good')}catch(e){setStatus('adsStatus',e.message,'warn')}}
+function setStatus(id,msg,kind){let e=document.getElementById(id);e.textContent=msg;e.className='status '+kind}
+function saveInputs(){try{let data={};document.querySelectorAll('#calTable input,#sampleInputs input,#c0,#vol,#mass').forEach(el=>data[el.id]=el.value);localStorage.setItem('wheatSorbentInputsV2',JSON.stringify(data))}catch(e){}}
+function restoreInputs(){try{let data=JSON.parse(localStorage.getItem('wheatSorbentInputsV2')||'{}');Object.entries(data).forEach(([id,value])=>{let el=document.getElementById(id);if(el)el.value=value})}catch(e){}}
+function clearCalibration(){document.querySelectorAll('#calTable input').forEach(x=>x.value='');saveInputs();calibration=null;sampleResult=null;['equation','r2','ncal'].forEach((id,i)=>document.getElementById(id).textContent=i===2?'0':'—');for(let i=0;i<5;i++){document.getElementById('meanR'+i).textContent='—';document.getElementById('abs'+i).textContent='—'}setStatus('calStatus','Калибровка деректері тазартылды.','');drawChart()}
+function clearSample(){document.querySelectorAll('#sampleInputs input').forEach(x=>x.value='');saveInputs();sampleResult=null;['sampleR','sampleA','ce','rangeFlag'].forEach(id=>document.getElementById(id).textContent='—');setStatus('sampleStatus','Үлгі деректері тазартылды.','')}
+function fillExample(){putExampleCalibration();calcCalibration();saveInputs();setStatus('calStatus','Скриншоттағы калибровка мәндері мысал ретінде енгізілді. Бұл деректерді нақты тәжірибе нәтижесі деп көрсетпеңіз.','warn')}
+function downloadCSV(){let lines=['Бөлім,Концентрация (мг/л),Орташа R,A_R'];if(calibration)calibration.xs.forEach((x,i)=>lines.push(`Калибровка,${x},${calibration.means[i]},${calibration.ys[i]}`));if(sampleResult)lines.push(`Үлгі,${sampleResult.ce},${sampleResult.r},${sampleResult.A}`);lines.push('',`R2,${calibration?calibration.r2:''}`,`C0 (мг/л),${document.getElementById('c0').value}`,`V (мл),${document.getElementById('vol').value}`,`m (г),${document.getElementById('mass').value}`,`Адсорбция тиімділігі (%),${document.getElementById('removal').textContent}`,`qe (мг/г),${document.getElementById('qe').textContent}`);let blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='WheatSorbent_results.csv';a.click();URL.revokeObjectURL(a.href)}
+build();drawChart();calcCalibration();
+</script>
+</body></html>
